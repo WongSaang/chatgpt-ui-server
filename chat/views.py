@@ -198,9 +198,7 @@ def get_current_model():
         'name': 'text-davinci-003',
         'max_tokens': 4097,
         'max_prompt_tokens': 3097,
-        'max_response_tokens': 1000,
-        'separator_token': '<|im_sep|>',
-        'end_token': '<|im_end|>'
+        'max_response_tokens': 1000
     }
     return model
 
