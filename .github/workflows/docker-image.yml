@@ -27,9 +27,17 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     -
-      name: Build and push
+      name: Build and push Asgi Server
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        target: asgi-server
+        push: true
+        tags: wongsaang/chatgpt-ui-asgi-server:latest,wongsaang/chatgpt-ui-asgi-server:${{ github.ref_name }}
+    -
+      name: Build and push Web Server
       uses: docker/build-push-action@v4
       with:
         context: .
         push: true
-        tags: wongsaang/chatgpt-ui-server:latest,wongsaang/chatgpt-ui-server:${{ github.ref_name }}
+        tags: wongsaang/chatgpt-ui-web-server:latest,wongsaang/chatgpt-ui-web-server:${{ github.ref_name }}
