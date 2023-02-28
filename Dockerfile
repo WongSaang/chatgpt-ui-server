@@ -21,11 +21,10 @@ WORKDIR /app
 COPY --chown=appuser . .
 
 RUN python manage.py check --deploy \
-    && mkdir static \
     && python manage.py collectstatic --no-input \
     && chmod +x entrypoint.sh
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]
 
 EXPOSE 8000
 
