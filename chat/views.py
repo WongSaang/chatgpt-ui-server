@@ -130,20 +130,22 @@ def conversation(request):
         # iterate through the stream of events
         for event in openai_response:
             collected_events.append(event)  # save the event response
-            if event['choices'][0]['finish_reason'] == 'stop':
-                ai_message_obj = Message(
-                    conversation_id=conversation_obj.id,
-                    parent_message_id=message_obj.id,
-                    message=completion_text,
-                    is_bot=True
-                )
-                ai_message_obj.save()
-                yield sse_pack('done', {'messageId': ai_message_obj.id, 'conversationId': conversation_obj.id})
+            # print(event)
+            if event['choices'][0]['finish_reason'] is not None:
                 break
             event_text = event['choices'][0]['text']  # extract the text
             completion_text += event_text  # append the text
             # print(event)
             yield sse_pack('message', {'content': event_text})
+
+        ai_message_obj = Message(
+            conversation_id=conversation_obj.id,
+            parent_message_id=message_obj.id,
+            message=completion_text,
+            is_bot=True
+        )
+        ai_message_obj.save()
+        yield sse_pack('done', {'messageId': ai_message_obj.id, 'conversationId': conversation_obj.id})
 
     return StreamingHttpResponse(stream_content(), content_type='text/event-stream')
 
