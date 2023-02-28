@@ -1,34 +1,25 @@
 version: '3'
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-    environment:
-      - DEBUG=False
-      - OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxx
+  asgi-server:
+    image: wongsaang/chatgpt-ui-asgi-server:latest
+#    environment:
+#      - DEBUG=False
 #      - DB_URL=postgres://postgres:postgrespw@localhost:49153/chatgpt
-    volumes:
-      - static_volume:/app/static
     ports:
       - '8000:8000'
     networks:
         - chatgpt_network
-  nginx:
-    image: nginx:alpine
-    volumes:
-      - ./nginx.conf:/etc/nginx/templates/default.conf.template
-      - static_volume:/app/static
+  web-server:
+    image: wongsaang/chatgpt-ui-web-server:latest
+    environment:
+      - BACKEND_URL=http://asgi-server:8000
     ports:
       - '80:80'
     depends_on:
-      - backend
+      - asgi-server
     networks:
       - chatgpt_network
 
 networks:
   chatgpt_network:
       driver: bridge
-
-volumes:
-  static_volume:

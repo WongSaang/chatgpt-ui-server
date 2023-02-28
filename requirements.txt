@@ -1,7 +1,7 @@
 Django==4.1.7
 openai==0.26.5
 uvicorn~=0.20.0
-psycopg2-binary~=2.9.5
+psycopg2~=2.9.5
 python-dotenv~=0.21.1
 dj-database-url~=1.2.0
 djangorestframework~=3.14.0
