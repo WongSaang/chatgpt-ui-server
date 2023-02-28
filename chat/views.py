@@ -56,20 +56,26 @@ def gen_title(request):
     conversation_id = request.data.get('conversationId')
     conversation = Conversation.objects.get(id=conversation_id)
     message = Message.objects.filter(conversation_id=conversation_id).order_by('created_at').first()
-    prompt = f"Summarize this text with a concise title of 10 words or less(language by text):\n{message.message}"
+    prompt = f'''Generate a title of ten words or less from the following text:
+        [{message.message}]
+        Title: 
+    '''
 
     openai.api_key = get_openai_api_key()
-    openai_response = openai.Completion.create(
-        model='text-davinci-003',
-        prompt=prompt,
-        temperature=0.5,
-        max_tokens=60,
-        top_p=1.0,
-        frequency_penalty=0.8,
-        presence_penalty=0.0
-    )
-    completion_text = openai_response['choices'][0]['text']
-    title = completion_text.strip().replace("\n", "")
+    try:
+        openai_response = openai.Completion.create(
+            model='text-davinci-003',
+            prompt=prompt,
+            temperature=0.5,
+            max_tokens=60,
+            top_p=1.0,
+            frequency_penalty=0.8,
+            presence_penalty=0.0
+        )
+        completion_text = openai_response['choices'][0]['text']
+        title = completion_text.strip().replace('"', '')
+    except:
+        title = 'Untitled Conversation'
     # update the conversation title
     conversation.topic = title
     conversation.save()
@@ -106,7 +112,7 @@ def conversation(request):
     message_obj.save()
 
     prompt = build_prompt(conversation_obj)
-    # print(prompt)
+    print(prompt)
 
     num_tokens = get_token_count(prompt)
     max_tokens = min(model['max_tokens'] - num_tokens, model['max_response_tokens'])
@@ -158,10 +164,9 @@ def build_prompt(conversation_obj):
 
     ai_label = 'AI'
     user_label = 'Human'
-    separator_token = model['separator_token']
     current_date_string = datetime.datetime.today().strftime('%B %d, %Y')
-    prompt_prefix = f"\n{separator_token}Instructions:\nYou are ChatGPT, a large language model trained by OpenAI.\nOutput the text in Markdown format{separator_token}\n\n"
-    prompt_suffix = f"{ai_label}:\n"
+    prompt_prefix = f'Instructions:\nYou are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {current_date_string}\n'
+    prompt_suffix = f"{ai_label}:"
 
     current_token_count = get_token_count(f"{prompt_prefix}{prompt_suffix}")
     prompt_body = ''
@@ -170,7 +175,7 @@ def build_prompt(conversation_obj):
     while current_token_count < max_token_count and len(ordered_messages_list) > 0:
         message = ordered_messages_list.pop()
         role_label = ai_label if message.is_bot else user_label
-        message_string = f"{role_label}:\n{message.message}{model['end_token']}\n"
+        message_string = f"{role_label}: {message.message}\n"
         if prompt_body:
             new_prompt_body = f"{message_string}{prompt_body}"
         else:
