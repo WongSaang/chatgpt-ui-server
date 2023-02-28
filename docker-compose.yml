@@ -1,9 +1,10 @@
 version: '3'
 services:
   asgi-server:
-    image: wongsaang/chatgpt-ui-asgi-server:latest
-#    environment:
-#      - DEBUG=False
+    build: .
+    environment:
+      - APP_DOMAIN=localhost:9000
+#      - DEBUG=True
 #      - DB_URL=postgres://postgres:postgrespw@localhost:49153/chatgpt
     ports:
       - '8000:8000'
@@ -14,7 +15,7 @@ services:
     environment:
       - BACKEND_URL=http://asgi-server:8000
     ports:
-      - '80:80'
+      - '9000:80'
     depends_on:
       - asgi-server
     networks:

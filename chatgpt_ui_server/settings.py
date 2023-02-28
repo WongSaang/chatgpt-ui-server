@@ -32,10 +32,11 @@ DEBUG = os.getenv('DEBUG', False) == 'True'
 
 ALLOWED_HOSTS = ['*']
 
-CSRF_TRUSTED_ORIGINS=[
-    'http://' + os.getenv('APP_DOMAIN', 'localhost:9000'),
-    'https://' + os.getenv('APP_DOMAIN', 'localhost:9000')
-]
+app_domains = os.getenv('APP_DOMAIN', 'localhost:9000').split(',')
+CSRF_TRUSTED_ORIGINS = []
+for app_domain in app_domains:
+    CSRF_TRUSTED_ORIGINS.append('http://' + app_domain)
+    CSRF_TRUSTED_ORIGINS.append('https://' + app_domain)
 
 
 # Application definition
