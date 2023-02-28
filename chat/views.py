@@ -112,7 +112,7 @@ def conversation(request):
     message_obj.save()
 
     prompt = build_prompt(conversation_obj)
-    print(prompt)
+    # print(prompt)
 
     num_tokens = get_token_count(prompt)
     max_tokens = min(model['max_tokens'] - num_tokens, model['max_response_tokens'])

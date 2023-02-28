@@ -29,10 +29,10 @@ ENTRYPOINT ["./entrypoint.sh"]
 EXPOSE 8000
 
 
-FROM nginx:1.22-alpine as web-server
-
-WORKDIR /app
-
-COPY --from=asgi-server /app/static /app/static
-
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+#FROM nginx:1.22-alpine as web-server
+#
+#WORKDIR /app
+#
+#COPY --from=asgi-server /app/static /app/static
+#
+#COPY nginx.conf /etc/nginx/templates/default.conf.template
