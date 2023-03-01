@@ -1,4 +1,4 @@
-FROM python:3.10-slim as asgi-server
+FROM python:3.10-slim as wsgi-server
 
 RUN apt update \
     && apt install -y --no-install-recommends python3-dev default-libmysqlclient-dev build-essential libpq-dev \
@@ -29,10 +29,10 @@ ENTRYPOINT ["./entrypoint.sh"]
 EXPOSE 8000
 
 
-#FROM nginx:1.22-alpine as web-server
-#
-#WORKDIR /app
-#
-#COPY --from=asgi-server /app/static /app/static
-#
-#COPY nginx.conf /etc/nginx/templates/default.conf.template
+FROM nginx:1.22-alpine as web-server
+
+WORKDIR /app
+
+COPY --from=wsgi-server /app/static /app/static
+
+COPY nginx.conf /etc/nginx/templates/default.conf.template
