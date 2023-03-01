@@ -48,9 +48,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     'rest_framework',
-    'chat.apps.ChatConfig'
+    'chat.apps.ChatConfig',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount'
 ]
+
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_EMAIL_REQUIRED = True
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
