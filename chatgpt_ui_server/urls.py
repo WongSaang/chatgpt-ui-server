@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/auth/session', get_current_user, name='current_user'),
     path('api/auth/signin', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/auth/', include('auth.urls')),
     path('api/chat/', include('chat.urls')),
     path('api/conversation', conversation, name='conversation'),
     path('api/gen_title', gen_title, name='gen_title'),
