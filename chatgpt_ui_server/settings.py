@@ -59,22 +59,6 @@ INSTALLED_APPS = [
     'chat.apps.ChatConfig'
 ]
 
-SITE_ID = 1
-
-REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        # 'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
-        # 'rest_framework_simplejwt.authentication.JWTAuthentication'
-        'dj_rest_auth.jwt_auth.JWTCookieAuthentication'
-    ]
-}
-
-REST_AUTH = {
-    'USE_JWT': True,
-}
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -155,6 +139,24 @@ STATIC_ROOT = os.path.join(BASE_DIR, STATIC_URL)
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # 'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
+        # 'rest_framework_simplejwt.authentication.JWTAuthentication'
+        'dj_rest_auth.jwt_auth.JWTCookieAuthentication'
+    ]
+}
+
+SITE_ID = 1
+
+REST_AUTH = {
+    'USE_JWT': True,
+    'JWT_AUTH_COOKIE': 'auth',
+}
 
 # Allauth settings
 ACCOUNT_ADAPTER = 'account.allauth.AccountAdapter'
