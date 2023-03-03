@@ -15,18 +15,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
-from chat.views import get_current_user, conversation, gen_title
+from chat.views import conversation, gen_title
 
 urlpatterns = [
-    path('api/auth/session', get_current_user, name='current_user'),
-    path('api/auth/signin', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/auth/token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/chat/', include('chat.urls')),
-    path('api/conversation', conversation, name='conversation'),
-    path('api/gen_title', gen_title, name='gen_title'),
+    path('api/conversation/', conversation, name='conversation'),
+    path('api/gen_title/', gen_title, name='gen_title'),
+    path('api/account/', include('dj_rest_auth.urls')),
+    path('api/account/registration/', include('dj_rest_auth.registration.urls')),
     path('admin/', admin.site.urls),
 ]
