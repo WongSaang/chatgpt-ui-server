@@ -110,6 +110,9 @@ def conversation(request):
 
     try:
         messages = build_messages(conversation_obj)
+
+        if settings.DEBUG:
+            print(messages)
     except ValueError as e:
         return Response(
             {

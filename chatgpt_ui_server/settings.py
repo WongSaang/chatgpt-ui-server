@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 import os
+from datetime import timedelta
+
 import dj_database_url
 from pathlib import Path
 from dotenv import load_dotenv
@@ -157,6 +159,10 @@ REST_AUTH = {
     'USE_JWT': True,
     'JWT_AUTH_COOKIE': 'auth',
     'USER_DETAILS_SERIALIZER': 'account.serializers.UserDetailsSerializer'
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
 }
 
 # Allauth settings
