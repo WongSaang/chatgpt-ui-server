@@ -4,6 +4,7 @@ import openai
 import datetime
 import tiktoken
 from .models import Conversation, Message, Setting
+from django.conf import settings
 from django.http import StreamingHttpResponse
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -28,7 +29,8 @@ class MessageViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Message.objects.filter(conversation_id=self.request.query_params.get('conversationId')).order_by('created_at')
+        return Message.objects.filter(conversation_id=self.request.query_params.get('conversationId')).order_by(
+            'created_at')
 
 
 def sse_pack(event, data):
@@ -54,7 +56,7 @@ def gen_title(request):
     myOpenai = get_openai()
     try:
         openai_response = myOpenai.Completion.create(
-            model='gpt-3.5-turbo',
+            model='text-davinci-003',
             prompt=prompt,
             temperature=0.5,
             max_tokens=60,
@@ -80,7 +82,12 @@ def gen_title(request):
 def conversation(request):
     api_key = get_openai_api_key()
     if api_key is None:
-        return Response({'error': 'The administrator has not set the API key'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            {
+                'error': 'The administrator has not set the API key'
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
     model = get_current_model()
     message = request.data.get('message')
     conversation_id = request.data.get('conversationId')
@@ -101,24 +108,31 @@ def conversation(request):
     )
     message_obj.save()
 
-    prompt = build_prompt(conversation_obj)
+    try:
+        messages = build_messages(conversation_obj)
+    except ValueError as e:
+        return Response(
+            {
+                'error': e
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
     # print(prompt)
 
-    num_tokens = get_token_count(prompt)
+    num_tokens = num_tokens_from_messages(messages)
     max_tokens = min(model['max_tokens'] - num_tokens, model['max_response_tokens'])
 
     def stream_content():
         myOpenai = get_openai()
 
-        openai_response = myOpenai.Completion.create(
+        openai_response = myOpenai.ChatCompletion.create(
             model=model['name'],
-            prompt=prompt,
+            messages=messages,
             max_tokens=max_tokens,
-            temperature=0.9,
+            temperature=0.7,
             top_p=1,
-            frequency_penalty=0.0,
-            presence_penalty=0.6,
-            stop=[" Human:", " AI:"],
+            frequency_penalty=0,
+            presence_penalty=0,
             stream=True,
         )
         collected_events = []
@@ -129,10 +143,13 @@ def conversation(request):
             # print(event)
             if event['choices'][0]['finish_reason'] is not None:
                 break
-            event_text = event['choices'][0]['text']  # extract the text
-            completion_text += event_text  # append the text
-            # print(event)
-            yield sse_pack('message', {'content': event_text})
+            # if debug
+            if settings.DEBUG:
+                print(event)
+            if 'content' in event['choices'][0]['delta']:
+                event_text = event['choices'][0]['delta']['content']
+                completion_text += event_text  # append the text
+                yield sse_pack('message', {'content': event_text})
 
         ai_message_obj = Message(
             conversation_id=conversation_obj.id,
@@ -146,42 +163,35 @@ def conversation(request):
     return StreamingHttpResponse(stream_content(), content_type='text/event-stream')
 
 
-def build_prompt(conversation_obj):
+def build_messages(conversation_obj):
     model = get_current_model()
 
     ordered_messages = Message.objects.filter(conversation=conversation_obj).order_by('created_at')
     ordered_messages_list = list(ordered_messages)
 
-    ai_label = 'AI'
-    user_label = 'Human'
-    current_date_string = datetime.datetime.today().strftime('%B %d, %Y')
-    prompt_prefix = f'Instructions:\nYou are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {current_date_string}\n'
-    prompt_suffix = f"{ai_label}:"
+    system_messages = [{"role": "system", "content": "You are a helpful assistant."}]
 
-    current_token_count = get_token_count(f"{prompt_prefix}{prompt_suffix}")
-    prompt_body = ''
+    current_token_count = num_tokens_from_messages(system_messages, model['name'])
+
     max_token_count = model['max_prompt_tokens']
+
+    messages = []
 
     while current_token_count < max_token_count and len(ordered_messages_list) > 0:
         message = ordered_messages_list.pop()
-        role_label = ai_label if message.is_bot else user_label
-        message_string = f"{role_label}: {message.message}\n"
-        if prompt_body:
-            new_prompt_body = f"{message_string}{prompt_body}"
-        else:
-            new_prompt_body = f"{prompt_prefix}{message_string}{prompt_body}"
-
-        new_token_count = get_token_count(f"{prompt_prefix}{new_prompt_body}{prompt_suffix}")
+        role = "assistant" if message.is_bot else "user"
+        new_message = {"role": role, "content": message.message}
+        new_token_count = num_tokens_from_messages(system_messages + messages + [new_message])
         if new_token_count > max_token_count:
-            if prompt_body:
+            if len(messages) > 0:
                 break
-            raise ValueError(f"Prompt is too long. Max token count is {max_token_count}, but prompt is {new_token_count} tokens long.")
-        prompt_body = new_prompt_body
+            raise ValueError(
+                f"Prompt is too long. Max token count is {max_token_count}, but prompt is {new_token_count} tokens long.")
+        messages.insert(0, new_message)
         current_token_count = new_token_count
 
-    prompt = f"{prompt_body}{prompt_suffix}"
+    return system_messages + messages
 
-    return prompt
 
 def get_current_model():
     model = {
@@ -192,16 +202,35 @@ def get_current_model():
     }
     return model
 
+
 def get_openai_api_key():
     row = Setting.objects.filter(name='openai_api_key').first()
     if row:
         return row.value
     return None
 
-def get_token_count(token):
-    model = get_current_model()
-    enc = tiktoken.encoding_for_model(model['name'])
-    return len(enc.encode(token))
+
+def num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
+    """Returns the number of tokens used by a list of messages."""
+    try:
+        encoding = tiktoken.encoding_for_model(model)
+    except KeyError:
+        encoding = tiktoken.get_encoding("cl100k_base")
+    if model == "gpt-3.5-turbo":  # note: future models may deviate from this
+        num_tokens = 0
+        for message in messages:
+            num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+            for key, value in message.items():
+                num_tokens += len(encoding.encode(value))
+                if key == "name":  # if there's a name, the role is omitted
+                    num_tokens += -1  # role is always required and always 1 token
+        num_tokens += 2  # every reply is primed with <im_start>assistant
+        return num_tokens
+    else:
+        raise NotImplementedError(f"""num_tokens_from_messages() is not presently implemented for model {model}. See 
+        https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to 
+        tokens.""")
+
 
 def get_openai():
     openai.api_key = get_openai_api_key()

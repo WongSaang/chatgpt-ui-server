@@ -1,6 +1,6 @@
 version: '3'
 services:
-  asgi-server:
+  wsgi-server:
     build: .
     environment:
       - APP_DOMAIN=localhost:9000
@@ -13,11 +13,11 @@ services:
   web-server:
     image: wongsaang/chatgpt-ui-web-server:latest
     environment:
-      - BACKEND_URL=http://asgi-server:8000
+      - BACKEND_URL=http://wsgi-server:8000
     ports:
       - '9000:80'
     depends_on:
-      - asgi-server
+      - wsgi-server
     networks:
       - chatgpt_network
 

@@ -162,7 +162,6 @@ REST_AUTH = {
 # Allauth settings
 ACCOUNT_ADAPTER = 'account.allauth.AccountAdapter'
 
-
 # Email settings
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.mailgun.org')

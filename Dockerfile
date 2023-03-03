@@ -12,13 +12,9 @@ COPY requirements.txt ./
 
 RUN pip install --no-cache-dir -i https://mirrors.cloud.tencent.com/pypi/simple -r requirements.txt
 
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser && mkdir -p /app && chown appuser /app
-
-USER appuser
-
 WORKDIR /app
 
-COPY --chown=appuser . .
+COPY . .
 
 RUN python manage.py check --deploy \
     && python manage.py collectstatic --no-input \
