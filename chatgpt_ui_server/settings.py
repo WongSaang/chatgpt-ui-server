@@ -156,14 +156,15 @@ SITE_ID = 1
 REST_AUTH = {
     'USE_JWT': True,
     'JWT_AUTH_COOKIE': 'auth',
+    'USER_DETAILS_SERIALIZER': 'account.serializers.UserDetailsSerializer'
 }
 
 # Allauth settings
 ACCOUNT_ADAPTER = 'account.allauth.AccountAdapter'
 
+
 # Email settings
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.mailgun.org')
 EMAIL_PORT = os.getenv('EMAIL_PORT', 587)
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')

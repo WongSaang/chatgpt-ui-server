@@ -15,7 +15,7 @@ from .serializers import ConversationSerializer, MessageSerializer
 
 class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
-    authentication_classes = [JWTAuthentication]
+    # authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -24,21 +24,11 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
 class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
-    authentication_classes = [JWTAuthentication]
+    # authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Message.objects.filter(conversation_id=self.request.query_params.get('conversationId')).order_by('created_at')
-
-
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
-def get_current_user(request):
-    user = request.user
-    return Response({
-        'username': user.username,
-    })
 
 
 def sse_pack(event, data):
@@ -50,21 +40,21 @@ def sse_pack(event, data):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
+# @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def gen_title(request):
     conversation_id = request.data.get('conversationId')
-    conversation = Conversation.objects.get(id=conversation_id)
+    conversation_obj = Conversation.objects.get(id=conversation_id)
     message = Message.objects.filter(conversation_id=conversation_id).order_by('created_at').first()
     prompt = f'''Generate a title of ten words or less from the following text:
         [{message.message}]
         Title: 
     '''
 
-    openai.api_key = get_openai_api_key()
+    myOpenai = get_openai()
     try:
-        openai_response = openai.Completion.create(
-            model='text-davinci-003',
+        openai_response = myOpenai.Completion.create(
+            model='gpt-3.5-turbo',
             prompt=prompt,
             temperature=0.5,
             max_tokens=60,
@@ -77,15 +67,15 @@ def gen_title(request):
     except:
         title = 'Untitled Conversation'
     # update the conversation title
-    conversation.topic = title
-    conversation.save()
+    conversation_obj.topic = title
+    conversation_obj.save()
     return Response({
         'title': title
     })
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
+# @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def conversation(request):
     api_key = get_openai_api_key()
@@ -118,9 +108,9 @@ def conversation(request):
     max_tokens = min(model['max_tokens'] - num_tokens, model['max_response_tokens'])
 
     def stream_content():
-        openai.api_key = api_key
+        myOpenai = get_openai()
 
-        openai_response = openai.Completion.create(
+        openai_response = myOpenai.Completion.create(
             model=model['name'],
             prompt=prompt,
             max_tokens=max_tokens,
@@ -195,9 +185,9 @@ def build_prompt(conversation_obj):
 
 def get_current_model():
     model = {
-        'name': 'text-davinci-003',
-        'max_tokens': 4097,
-        'max_prompt_tokens': 3097,
+        'name': 'gpt-3.5-turbo',
+        'max_tokens': 4096,
+        'max_prompt_tokens': 3096,
         'max_response_tokens': 1000
     }
     return model
@@ -212,3 +202,10 @@ def get_token_count(token):
     model = get_current_model()
     enc = tiktoken.encoding_for_model(model['name'])
     return len(enc.encode(token))
+
+def get_openai():
+    openai.api_key = get_openai_api_key()
+    proxy = os.getenv('OPENAI_API_PROXY')
+    if proxy:
+        openai.api_base = proxy
+    return openai
