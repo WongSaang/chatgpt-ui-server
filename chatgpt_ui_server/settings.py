@@ -157,12 +157,14 @@ SITE_ID = 1
 
 REST_AUTH = {
     'USE_JWT': True,
+    'SESSION_LOGIN': False,
     'JWT_AUTH_COOKIE': 'auth',
+    'JWT_AUTH_HTTPONLY': True,
     'USER_DETAILS_SERIALIZER': 'account.serializers.UserDetailsSerializer'
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
 }
 
 # Allauth settings
