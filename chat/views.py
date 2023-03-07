@@ -10,7 +10,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes, action
 from .serializers import ConversationSerializer, MessageSerializer
 
 
@@ -21,6 +21,12 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Conversation.objects.filter(user=self.request.user).order_by('-created_at')
+
+    @action(detail=False, methods=['delete'])
+    def delete_all(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        queryset.delete()
+        return Response(status=204)
 
 
 class MessageViewSet(viewsets.ModelViewSet):
