@@ -1,7 +1,7 @@
 FROM python:3.10-slim as wsgi-server
 
 RUN apt update \
-    && apt install -y --no-install-recommends python3-dev default-libmysqlclient-dev build-essential libpq-dev \
+    && apt install -y --no-install-recommends python3-dev default-libmysqlclient-dev build-essential libpq-dev dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 ENV DJANGO_SUPERUSER_USERNAME=admin
@@ -18,6 +18,7 @@ COPY . .
 
 RUN python manage.py check --deploy \
     && python manage.py collectstatic --no-input \
+    && dos2unix entrypoint.sh \
     && chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]
