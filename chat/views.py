@@ -54,25 +54,28 @@ def gen_title(request):
     conversation_id = request.data.get('conversationId')
     conversation_obj = Conversation.objects.get(id=conversation_id)
     message = Message.objects.filter(conversation_id=conversation_id).order_by('created_at').first()
-    prompt = f'''Generate a title of ten words or less from the following text:
-        [{message.message}]
-        Title: 
-    '''
+
+    messages = [
+        {"role": "user", "content": 'Generate a short title for the following content, no more than 10 words: \n\n "%s"' % message.message},
+    ]
+
+    model = get_current_model()
 
     myOpenai = get_openai()
     try:
-        openai_response = myOpenai.Completion.create(
-            model='text-davinci-003',
-            prompt=prompt,
+        openai_response = myOpenai.ChatCompletion.create(
+            model=model['name'],
+            messages=messages,
+            max_tokens=256,
             temperature=0.5,
-            max_tokens=60,
-            top_p=1.0,
-            frequency_penalty=0.8,
-            presence_penalty=0.0
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0,
         )
-        completion_text = openai_response['choices'][0]['text']
+        completion_text = openai_response['choices'][0]['message']['content']
         title = completion_text.strip().replace('"', '')
-    except:
+    except Exception as e:
+        print(e)
         title = 'Untitled Conversation'
     # update the conversation title
     conversation_obj.topic = title
