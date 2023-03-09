@@ -16,6 +16,13 @@ class Message(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+class Prompt(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    prompt = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
 class Setting(models.Model):
     name = models.CharField(max_length=255)
     value = models.CharField(max_length=255)

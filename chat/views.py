@@ -3,7 +3,7 @@ import json
 import openai
 import datetime
 import tiktoken
-from .models import Conversation, Message, Setting
+from .models import Conversation, Message, Setting, Prompt
 from django.conf import settings
 from django.http import StreamingHttpResponse
 from rest_framework import viewsets, status
@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, action
-from .serializers import ConversationSerializer, MessageSerializer
+from .serializers import ConversationSerializer, MessageSerializer, PromptSerializer
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -37,6 +37,31 @@ class MessageViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Message.objects.filter(conversation_id=self.request.query_params.get('conversationId')).order_by(
             'created_at')
+
+
+class PromptViewSet(viewsets.ModelViewSet):
+    serializer_class = PromptSerializer
+    # authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Prompt.objects.filter(user=self.request.user).order_by('-created_at')
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        serializer.validated_data['user'] = request.user
+
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    @action(detail=False, methods=['delete'])
+    def delete_all(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        queryset.delete()
+        return Response(status=204)
 
 
 def sse_pack(event, data):
