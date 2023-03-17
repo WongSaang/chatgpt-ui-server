@@ -126,6 +126,11 @@ def conversation(request):
     message = request.data.get('message')
     conversation_id = request.data.get('conversationId')
     parent_message_id = request.data.get('parentMessageId')
+    max_tokens = request.data.get('max_tokens', model['max_response_tokens'])
+    temperature = request.data.get('temperature', 0.7)
+    top_p = request.data.get('top_p', 1)
+    frequency_penalty = request.data.get('frequency_penalty', 0)
+    presence_penalty = request.data.get('presence_penalty', 0)
 
     if conversation_id:
         # get the conversation
@@ -156,9 +161,6 @@ def conversation(request):
         )
     # print(prompt)
 
-    num_tokens = num_tokens_from_messages(messages)
-    max_tokens = min(model['max_tokens'] - num_tokens, model['max_response_tokens'])
-
     def stream_content():
         myOpenai = get_openai()
 
@@ -166,10 +168,10 @@ def conversation(request):
             model=model['name'],
             messages=messages,
             max_tokens=max_tokens,
-            temperature=0.7,
-            top_p=1,
-            frequency_penalty=0,
-            presence_penalty=0,
+            temperature=temperature,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty,
             stream=True,
         )
         collected_events = []
