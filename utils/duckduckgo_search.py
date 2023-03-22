@@ -1,31 +1,9 @@
 import requests
-from typing import Dict, List
-
+from typing import List
 from bs4 import BeautifulSoup
-
+from .search_abc import SearchRequest, SearchResponse, SearchResult
 
 BASE_URL = 'https://lite.duckduckgo.com'
-
-
-class SearchRequest:
-    def __init__(self, query: str, timerange: str, region: str):
-        self.query = query
-        self.timerange = timerange
-        self.region = region
-
-
-class SearchResponse:
-    def __init__(self, status: int, html: str, url: str):
-        self.status = status
-        self.html = html
-        self.url = url
-
-
-class SearchResult:
-    def __init__(self, title: str, body: str, url: str):
-        self.title = title
-        self.body = body
-        self.url = url
 
 
 def get_html(search: SearchRequest) -> SearchResponse:
@@ -34,6 +12,7 @@ def get_html(search: SearchRequest) -> SearchResponse:
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'text/html,application/xhtml+xml,application/xmlq=0.9,image/avif,image/webp,image/apng,*/*q=0.8,application/signed-exchangev=b3q=0.7',
         'AcceptEncoding': 'gzip, deflate, br',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'
     }
     data = {
         'q': query,
@@ -71,5 +50,4 @@ def web_search(search: SearchRequest, num_results: int) -> List[SearchResult]:
     if response.url == f'{BASE_URL}/lite/':
         return html_to_search_results(response.html, num_results)
     else:
-        # TODO: Implement web page text extraction
-        return []
+        raise Exception(f'Unexpected redirect: {response.url}')
