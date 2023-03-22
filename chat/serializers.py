@@ -9,7 +9,7 @@ class ConversationSerializer(serializers.ModelSerializer):
 class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
-        fields = ['id', 'parent_message', 'message', 'is_bot', 'created_at']
+        fields = ['id', 'message', 'is_bot', 'created_at']
 
 
 class PromptSerializer(serializers.ModelSerializer):

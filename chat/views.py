@@ -129,7 +129,6 @@ def conversation(request):
     model = get_current_model()
     message = request.data.get('message')
     conversation_id = request.data.get('conversationId')
-    # parent_message_id = request.data.get('parentMessageId')
     max_tokens = request.data.get('max_tokens', model['max_response_tokens'])
     temperature = request.data.get('temperature', 0.7)
     top_p = request.data.get('top_p', 1)
@@ -146,7 +145,6 @@ def conversation(request):
     # insert a new message
     message_obj = Message(
         conversation_id=conversation_obj.id,
-        # parent_message_id=parent_message_id,
         message=message
     )
     message_obj.save()
@@ -200,7 +198,6 @@ def conversation(request):
 
         ai_message_obj = Message(
             conversation_id=conversation_obj.id,
-            # parent_message_id=message_obj.id,
             message=completion_text,
             is_bot=True
         )

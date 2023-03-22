@@ -10,7 +10,6 @@ class Conversation(models.Model):
 
 class Message(models.Model):
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE)
-    parent_message = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
     message = models.TextField()
     is_bot = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
