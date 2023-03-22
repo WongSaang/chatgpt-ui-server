@@ -136,6 +136,7 @@ def conversation(request):
     top_p = request.data.get('top_p', 1)
     frequency_penalty = request.data.get('frequency_penalty', 0)
     presence_penalty = request.data.get('presence_penalty', 0)
+    web_search_params = request.data.get('web_search')
 
     if conversation_id:
         # get the conversation
@@ -152,7 +153,7 @@ def conversation(request):
     message_obj.save()
 
     try:
-        messages = build_messages(conversation_obj)
+        messages = build_messages(conversation_obj, web_search_params)
 
         if settings.DEBUG:
             print(messages)
@@ -212,7 +213,7 @@ def conversation(request):
     return StreamingHttpResponse(stream_content(), content_type='text/event-stream')
 
 
-def build_messages(conversation_obj, search_engine=False):
+def build_messages(conversation_obj, web_search_params):
     model = get_current_model()
 
     ordered_messages = Message.objects.filter(conversation=conversation_obj).order_by('created_at')
@@ -229,7 +230,7 @@ def build_messages(conversation_obj, search_engine=False):
     while current_token_count < max_token_count and len(ordered_messages_list) > 0:
         message = ordered_messages_list.pop()
         role = "assistant" if message.is_bot else "user"
-        if search_engine and len(messages) == 0:
+        if web_search_params is not None and len(messages) == 0:
             search_results = web_search(SearchRequest(message.message), num_results=5)
             message_content = compile_prompt(search_results, message.message)
         else:

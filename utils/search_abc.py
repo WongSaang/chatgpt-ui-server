@@ -1,8 +1,9 @@
 class SearchRequest:
-    def __init__(self, query: str, timerange: str = None, region: str = None):
+    def __init__(self, query: str, timerange: str = None, region: str = None, ua: str = None):
         self.query = query
         self.timerange = timerange
         self.region = region
+        self.ua = ua
 
 
 class SearchResponse:
