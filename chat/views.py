@@ -242,10 +242,10 @@ def build_messages(conversation_obj):
 
 def get_current_model():
     model = {
-        'name': 'gpt-3.5-turbo',
-        'max_tokens': 4096,
-        'max_prompt_tokens': 3096,
-        'max_response_tokens': 1000
+        'name': 'gpt-4',
+        'max_tokens': 8192,
+        'max_prompt_tokens': 6500,
+        'max_response_tokens': 1692
     }
     return model
 
@@ -257,13 +257,13 @@ def get_openai_api_key():
     return None
 
 
-def num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
+def num_tokens_from_messages(messages, model="gpt-4"):
     """Returns the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
         encoding = tiktoken.get_encoding("cl100k_base")
-    if model == "gpt-3.5-turbo":  # note: future models may deviate from this
+    if model == "gpt-4":  # note: future models may deviate from this
         num_tokens = 0
         for message in messages:
             num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
