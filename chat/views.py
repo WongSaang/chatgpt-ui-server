@@ -33,10 +33,14 @@ class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     # authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    queryset = Message.objects.all()
 
     def get_queryset(self):
-        return Message.objects.filter(conversation_id=self.request.query_params.get('conversationId')).order_by(
-            'created_at')
+        queryset = super().get_queryset()
+        conversationId = self.request.query_params.get('conversationId')
+        if conversationId:
+            queryset = queryset.filter(conversation_id=conversationId).order_by('created_at')
+        return queryset
 
 
 class PromptViewSet(viewsets.ModelViewSet):
@@ -125,7 +129,7 @@ def conversation(request):
     model = get_current_model()
     message = request.data.get('message')
     conversation_id = request.data.get('conversationId')
-    parent_message_id = request.data.get('parentMessageId')
+    # parent_message_id = request.data.get('parentMessageId')
     max_tokens = request.data.get('max_tokens', model['max_response_tokens'])
     temperature = request.data.get('temperature', 0.7)
     top_p = request.data.get('top_p', 1)
@@ -142,7 +146,7 @@ def conversation(request):
     # insert a new message
     message_obj = Message(
         conversation_id=conversation_obj.id,
-        parent_message_id=parent_message_id,
+        # parent_message_id=parent_message_id,
         message=message
     )
     message_obj.save()
@@ -162,6 +166,10 @@ def conversation(request):
     # print(prompt)
 
     def stream_content():
+        yield sse_pack('userMessageId', {
+            'userMessageId': message_obj.id,
+        })
+
         myOpenai = get_openai()
 
         openai_response = myOpenai.ChatCompletion.create(
@@ -192,12 +200,15 @@ def conversation(request):
 
         ai_message_obj = Message(
             conversation_id=conversation_obj.id,
-            parent_message_id=message_obj.id,
+            # parent_message_id=message_obj.id,
             message=completion_text,
             is_bot=True
         )
         ai_message_obj.save()
-        yield sse_pack('done', {'messageId': ai_message_obj.id, 'conversationId': conversation_obj.id})
+        yield sse_pack('done', {
+            'messageId': ai_message_obj.id,
+            'conversationId': conversation_obj.id
+        })
 
     return StreamingHttpResponse(stream_content(), content_type='text/event-stream')
 
