@@ -11,9 +11,25 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, action
-from .serializers import ConversationSerializer, MessageSerializer, PromptSerializer
+from .serializers import ConversationSerializer, MessageSerializer, PromptSerializer, SettingSerializer
 from utils.search_prompt import compile_prompt
 from utils.duckduckgo_search import web_search, SearchRequest
+
+
+class SettingViewSet(viewsets.ModelViewSet):
+    serializer_class = SettingSerializer
+    permission_classes = [IsAuthenticated]
+    def get_queryset(self):
+        available_names = [
+            'open_registration',
+            'open_web_search'
+        ]
+        return Setting.objects.filter(name__in=available_names)
+
+    def http_method_not_allowed(self, request, *args, **kwargs):
+        if request.method != 'GET':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().http_method_not_allowed(request, *args, **kwargs)
 
 
 class ConversationViewSet(viewsets.ModelViewSet):

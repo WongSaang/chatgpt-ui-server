@@ -12,3 +12,6 @@ def load_default_settings(sender, **kwargs):
         if not Setting.objects.filter(name='open_registration').exists():
             Setting.objects.create(name='open_registration', value='True')
             print('Created setting: open_registration')
+        if not Setting.objects.filter(name='open_web_search').exists():
+            Setting.objects.create(name='open_web_search', value='False')
+            print('Created setting: open_web_search')
