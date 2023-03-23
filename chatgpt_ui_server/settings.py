@@ -91,11 +91,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'chatgpt_ui_server.wsgi.application'
 
+db_config = dj_database_url.config('DB_URL', 'sqlite:///db.sqlite3')
+if db_config.get('ENGINE') == 'django.db.backends.mysql':
+    db_config['OPTIONS'] = {'charset': 'utf8mb4'}
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 DATABASES = {
-    'default': dj_database_url.config('DB_URL', 'sqlite:///db.sqlite3')
+    'default': db_config
 }
 
 
