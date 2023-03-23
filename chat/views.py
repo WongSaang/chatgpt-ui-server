@@ -174,6 +174,7 @@ def conversation(request):
         if settings.DEBUG:
             print(messages)
     except Exception as e:
+        print(e)
         return Response(
             {
                 'error': e
@@ -248,7 +249,7 @@ def build_messages(conversation_obj, web_search_params):
         role = "assistant" if message.is_bot else "user"
         if web_search_params is not None and len(messages) == 0:
             search_results = web_search(SearchRequest(message.message, ua=web_search_params['ua']), num_results=5)
-            message_content = compile_prompt(search_results, message.message)
+            message_content = compile_prompt(search_results, message.message, default_prompt=web_search_params['default_prompt'])
         else:
             message_content = message.message
         new_message = {"role": role, "content": message_content}
