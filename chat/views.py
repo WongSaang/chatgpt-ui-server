@@ -231,7 +231,7 @@ def build_messages(conversation_obj, web_search_params):
         message = ordered_messages_list.pop()
         role = "assistant" if message.is_bot else "user"
         if web_search_params is not None and len(messages) == 0:
-            search_results = web_search(SearchRequest(message.message), num_results=5)
+            search_results = web_search(SearchRequest(message.message, ua=web_search_params['ua']), num_results=5)
             message_content = compile_prompt(search_results, message.message)
         else:
             message_content = message.message
