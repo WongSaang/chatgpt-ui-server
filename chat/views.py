@@ -153,6 +153,7 @@ def conversation(request):
     frequency_penalty = request.data.get('frequency_penalty', 0)
     presence_penalty = request.data.get('presence_penalty', 0)
     web_search_params = request.data.get('web_search')
+    openai_api_key = request.data.get('openaiApiKey')
 
     if conversation_id:
         # get the conversation
@@ -188,7 +189,7 @@ def conversation(request):
             'userMessageId': message_obj.id,
         })
 
-        myOpenai = get_openai()
+        myOpenai = get_openai(openai_api_key)
 
         openai_response = myOpenai.ChatCompletion.create(
             model=model['name'],
@@ -304,8 +305,10 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
         tokens.""")
 
 
-def get_openai():
-    openai.api_key = get_openai_api_key()
+def get_openai(openai_api_key = None):
+    if openai_api_key is None:
+        openai_api_key = get_openai_api_key()
+    openai.api_key = openai_api_key
     proxy = os.getenv('OPENAI_API_PROXY')
     if proxy:
         openai.api_base = proxy
