@@ -22,7 +22,8 @@ class SettingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         available_names = [
             'open_registration',
-            'open_web_search'
+            'open_web_search',
+            'open_api_key_setting'
         ]
         return Setting.objects.filter(name__in=available_names)
 
