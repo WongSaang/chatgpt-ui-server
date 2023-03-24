@@ -10,13 +10,13 @@ def remove_commands(query: str) -> str:
 
 
 def compile_prompt(results: List[SearchResult], query: str, default_prompt: str) -> str:
-    # default_prompt = "Web search results:\n\n{web_results}\nCurrent date: {current_date}\n\nInstructions: Using the provided web search results, write a comprehensive reply to the given query. Make sure to cite results using [[number](URL)] notation after the reference. If the provided search results refer to multiple subjects with the same name, write separate answers for each subject.\nQuery: {query}"
     formatted_results = format_web_results(results)
     current_date = datetime.now().strftime("%m/%d/%Y")
+    print(default_prompt)
     prompt = replace_variables(default_prompt, {
-        '{web_results}': formatted_results,
-        '{query}': remove_commands(query),
-        '{current_date}': current_date
+        '[web_results]': formatted_results,
+        '[query]': remove_commands(query),
+        '[current_date]': current_date
     })
     return prompt
 
