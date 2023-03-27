@@ -1,11 +1,11 @@
 Django==4.1.7
 gunicorn==20.1.0
-openai~=0.27.0
+openai~=0.27.2
 psycopg2~=2.9.5
 python-dotenv~=0.21.1
 dj-database-url~=1.2.0
 djangorestframework~=3.14.0
-tiktoken~=0.3.0
+tiktoken~=0.3.2
 djangorestframework-simplejwt~=5.2.2
 mysqlclient~=2.1.1
 django-allauth~=0.52.0

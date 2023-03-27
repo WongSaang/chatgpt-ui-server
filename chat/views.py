@@ -87,6 +87,22 @@ class PromptViewSet(viewsets.ModelViewSet):
         return Response(status=204)
 
 
+MODELS = {
+    'gpt-3.5-turbo': {
+        'name': 'gpt-3.5-turbo',
+        'max_tokens': 4096,
+        'max_prompt_tokens': 3096,
+        'max_response_tokens': 1000
+    },
+    'gpt-4': {
+        'name': 'gpt-4',
+        'max_tokens': 8192,
+        'max_prompt_tokens': 6196,
+        'max_response_tokens': 2000
+    }
+}
+
+
 def sse_pack(event, data):
     # Format data as an SSE message
     packet = "event: %s\n" % event
@@ -107,12 +123,10 @@ def gen_title(request):
         {"role": "user", "content": 'Generate a short title for the following content, no more than 10 words: \n\n "%s"' % message.message},
     ]
 
-    model = get_current_model()
-
     myOpenai = get_openai()
     try:
         openai_response = myOpenai.ChatCompletion.create(
-            model=model['name'],
+            model='gpt-3.5-turbo-0301',
             messages=messages,
             max_tokens=256,
             temperature=0.5,
@@ -145,7 +159,11 @@ def conversation(request):
             },
             status=status.HTTP_400_BAD_REQUEST
         )
-    model = get_current_model()
+    model_name = request.data.get('name')
+    if model_name is None:
+        model = get_current_model()
+    else:
+        model = get_current_model(model_name)
     message = request.data.get('message')
     conversation_id = request.data.get('conversationId')
     max_tokens = request.data.get('max_tokens', model['max_response_tokens'])
@@ -171,7 +189,7 @@ def conversation(request):
     message_obj.save()
 
     try:
-        messages = build_messages(conversation_obj, web_search_params)
+        messages = build_messages(model, conversation_obj, web_search_params)
 
         if settings.DEBUG:
             print(messages)
@@ -192,16 +210,22 @@ def conversation(request):
 
         myOpenai = get_openai(openai_api_key)
 
-        openai_response = myOpenai.ChatCompletion.create(
-            model=model['name'],
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            top_p=top_p,
-            frequency_penalty=frequency_penalty,
-            presence_penalty=presence_penalty,
-            stream=True,
-        )
+        try:
+            openai_response = myOpenai.ChatCompletion.create(
+                model=model['name'],
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                frequency_penalty=frequency_penalty,
+                presence_penalty=presence_penalty,
+                stream=True,
+            )
+        except Exception as e:
+            yield sse_pack('error', {
+                'error': str(e)
+            })
+            return
         collected_events = []
         completion_text = ''
         # iterate through the stream of events
@@ -232,8 +256,7 @@ def conversation(request):
     return StreamingHttpResponse(stream_content(), content_type='text/event-stream')
 
 
-def build_messages(conversation_obj, web_search_params):
-    model = get_current_model()
+def build_messages(model, conversation_obj, web_search_params):
 
     ordered_messages = Message.objects.filter(conversation=conversation_obj).order_by('created_at')
     ordered_messages_list = list(ordered_messages)
@@ -267,14 +290,8 @@ def build_messages(conversation_obj, web_search_params):
     return system_messages + messages
 
 
-def get_current_model():
-    model = {
-        'name': 'gpt-3.5-turbo',
-        'max_tokens': 4096,
-        'max_prompt_tokens': 3096,
-        'max_response_tokens': 1000
-    }
-    return model
+def get_current_model(model="gpt-3.5-turbo"):
+    return MODELS[model]
 
 
 def get_openai_api_key():
@@ -284,26 +301,36 @@ def get_openai_api_key():
     return None
 
 
-def num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
+def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
     """Returns the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
+        print("Warning: model not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
-    if model == "gpt-3.5-turbo":  # note: future models may deviate from this
-        num_tokens = 0
-        for message in messages:
-            num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
-            for key, value in message.items():
-                num_tokens += len(encoding.encode(value))
-                if key == "name":  # if there's a name, the role is omitted
-                    num_tokens += -1  # role is always required and always 1 token
-        num_tokens += 2  # every reply is primed with <im_start>assistant
-        return num_tokens
+    if model == "gpt-3.5-turbo":
+        print("Warning: gpt-3.5-turbo may change over time. Returning num tokens assuming gpt-3.5-turbo-0301.")
+        return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301")
+    elif model == "gpt-4":
+        print("Warning: gpt-4 may change over time. Returning num tokens assuming gpt-4-0314.")
+        return num_tokens_from_messages(messages, model="gpt-4-0314")
+    elif model == "gpt-3.5-turbo-0301":
+        tokens_per_message = 4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
+        tokens_per_name = -1  # if there's a name, the role is omitted
+    elif model == "gpt-4-0314":
+        tokens_per_message = 3
+        tokens_per_name = 1
     else:
-        raise NotImplementedError(f"""num_tokens_from_messages() is not presently implemented for model {model}. See 
-        https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to 
-        tokens.""")
+        raise NotImplementedError(f"""num_tokens_from_messages() is not implemented for model {model}. See https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to tokens.""")
+    num_tokens = 0
+    for message in messages:
+        num_tokens += tokens_per_message
+        for key, value in message.items():
+            num_tokens += len(encoding.encode(value))
+            if key == "name":
+                num_tokens += tokens_per_name
+    num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
+    return num_tokens
 
 
 def get_openai(openai_api_key = None):
