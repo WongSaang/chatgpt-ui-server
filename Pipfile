@@ -1,0 +1,26 @@
+[[source]]
+url = "https://mirrors.cloud.tencent.com/pypi/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+django = "==4.1.7"
+gunicorn = "==20.1.0"
+openai = "~=0.27.2"
+psycopg2 = "~=2.9.5"
+python-dotenv = "~=0.21.1"
+dj-database-url = "~=1.2.0"
+djangorestframework = "~=3.14.0"
+tiktoken = "~=0.3.2"
+djangorestframework-simplejwt = "~=5.2.2"
+mysqlclient = "~=2.1.1"
+django-allauth = "~=0.52.0"
+dj-rest-auth = "~=3.0.0"
+requests = "~=2.27.1"
+beautifulsoup4 = "~=4.12.0"
+
+[dev-packages]
+mysql-connector-python = "~=8.0.32"
+
+[requires]
+python_version = "3.10"
