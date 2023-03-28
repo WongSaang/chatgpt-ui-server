@@ -15,7 +15,7 @@ class MessageSerializer(serializers.ModelSerializer):
 class PromptSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prompt
-        fields = ['id', 'prompt', 'created_at', 'updated_at']
+        fields = ['id', 'title', 'prompt', 'created_at', 'updated_at']
 
 
 class SettingSerializer(serializers.ModelSerializer):
