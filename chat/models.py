@@ -17,6 +17,7 @@ class Message(models.Model):
 
 class Prompt(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    title = models.TextField(null=True, blank=True)
     prompt = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
