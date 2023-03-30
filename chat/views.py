@@ -116,11 +116,15 @@ def sse_pack(event, data):
 @permission_classes([IsAuthenticated])
 def gen_title(request):
     conversation_id = request.data.get('conversationId')
+    prompt = request.data.get('prompt')
     conversation_obj = Conversation.objects.get(id=conversation_id)
     message = Message.objects.filter(conversation_id=conversation_id).order_by('created_at').first()
 
+    if prompt is None:
+        prompt = 'Generate a short title for the following content, no more than 10 words. \n\nContent: '
+
     messages = [
-        {"role": "user", "content": 'Generate a short title for the following content, no more than 10 words: \n\n "%s"' % message.message},
+        {"role": "user", "content": prompt + message.message},
     ]
 
     myOpenai = get_openai()
