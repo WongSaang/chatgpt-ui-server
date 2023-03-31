@@ -4,4 +4,6 @@ python manage.py migrate
 
 python manage.py createsuperuser --no-input
 
-exec gunicorn chatgpt_ui_server.wsgi --timeout 60 --bind 0.0.0.0:8000 --access-logfile -
+export WORKERS=${SERVER_WORKERS:-3}
+
+exec gunicorn chatgpt_ui_server.wsgi --workers=$WORKERS --timeout 60 --bind 0.0.0.0:8000 --access-logfile -
