@@ -195,18 +195,18 @@ if AD_INTEGRATION:
     ]
 
     # Add your LDAP settings
-    AUTH_LDAP_SERVER_URI = "ldap://ftw-dc101.xpressdocs.com"
+    AUTH_LDAP_SERVER_URI = os.getenv('AUTH_LDAP_SERVER_URI')
 
-    AUTH_LDAP_BIND_DN = "cn=ldapauth,cn=Users,dc=xpressdocs,dc=com"
-    AUTH_LDAP_BIND_PASSWORD = "L3@v3me@10ne!"
+    AUTH_LDAP_BIND_DN = os.getenv('AUTH_LDAP_BIND_DN')
+    AUTH_LDAP_BIND_PASSWORD = os.getenv('AUTH_LDAP_BIND_PASSWORD')
     AUTH_LDAP_USER_SEARCH = LDAPSearch(
-        "ou=Xpressdocs,dc=xpressdocs,dc=com",
+        os.getenv('AUTH_LDAP_USER_SEARCH_STRING'),
         ldap.SCOPE_SUBTREE,
         "(sAMAccountName=%(user)s)",
     )
 
     AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
-        "OU=Xpressdocs,DC=xpressdocs,DC=com",
+        os.getenv('AUTH_LDAP_GROUP_SEARCH_STRING'),
         ldap.SCOPE_SUBTREE,
         "(objectClass=group)",
     )
