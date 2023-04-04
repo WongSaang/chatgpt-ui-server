@@ -31,6 +31,7 @@ SECRET_KEY = 'django-insecure-__9p!i2^udts*l==hl)+6=!fi872f3ec(n%(^f-!6i$o5+7#ar
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', False) == 'True'
+AD_INTEGRATION = os.getenv('AD_INTEGRATION', False) == 'True'
 
 ALLOWED_HOSTS = ['*']
 
@@ -183,3 +184,46 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', True) == 'True'
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', False) == 'True'
 DEFAULT_FROM_EMAIL = os.getenv('EMAIL_FROM', 'webmaster@localhost')
+
+if AD_INTEGRATION:
+    import ldap
+    from django_auth_ldap.config import LDAPSearch, GroupOfNamesType
+
+    AUTHENTICATION_BACKENDS = [
+        'django_auth_ldap.backend.LDAPBackend', # Add this line
+        'django.contrib.auth.backends.ModelBackend',
+    ]
+
+    # Add your LDAP settings
+    AUTH_LDAP_SERVER_URI = "ldap://ftw-dc101.xpressdocs.com"
+
+    AUTH_LDAP_BIND_DN = "cn=ldapauth,cn=Users,dc=xpressdocs,dc=com"
+    AUTH_LDAP_BIND_PASSWORD = "L3@v3me@10ne!"
+    AUTH_LDAP_USER_SEARCH = LDAPSearch(
+        "ou=Xpressdocs,dc=xpressdocs,dc=com",
+        ldap.SCOPE_SUBTREE,
+        "(sAMAccountName=%(user)s)",
+    )
+
+    AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
+        "OU=Xpressdocs,DC=xpressdocs,DC=com",
+        ldap.SCOPE_SUBTREE,
+        "(objectClass=group)",
+    )
+    AUTH_LDAP_GROUP_TYPE = GroupOfNamesType()
+
+    # Cache group memberships for an hour to minimize LDAP traffic
+    AUTH_LDAP_CACHE_GROUPS = True
+    AUTH_LDAP_GROUP_CACHE_TIMEOUT = 3600
+
+    if DEBUG:
+        # enable logging for troubleshooting active directory integration
+        import logging
+
+        ad_logfile = "/tmp/django-ldap-debug.log"
+        my_ad_logger = logging.getLogger('django_auth_ldap')
+        my_ad_logger.setLevel(logging.DEBUG)
+
+        handler = logging.handlers.RotatingFileHandler(ad_logfile, maxBytes=1024 * 500, backupCount=5)
+
+        my_ad_logger.addHandler(handler)

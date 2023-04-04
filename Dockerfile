@@ -1,7 +1,8 @@
 FROM python:3.10-slim as wsgi-server
 
 RUN apt update \
-    && apt install -y --no-install-recommends python3-dev default-libmysqlclient-dev build-essential libpq-dev dos2unix \
+    && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends python3-dev default-libmysqlclient-dev build-essential libpq-dev dos2unix \
+        libldap2-dev libsasl2-dev slapd ldap-utils tox lcov valgrind \
     && rm -rf /var/lib/apt/lists/*
 
 ENV DJANGO_SUPERUSER_USERNAME=admin

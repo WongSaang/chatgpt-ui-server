@@ -12,6 +12,13 @@ services:
       ACCOUNT_EMAIL_VERIFICATION: ${ACCOUNT_EMAIL_VERIFICATION:-none} # Determines the e-mail verification method during signup – choose one of "none", "optional", or "mandatory". Default is "optional". If you don't need to verify the email, you can set it to "none".
 #      DEBUG: True
 #      DB_URL: postgres://postgres:postgrespw@localhost:49153/chatgpt
+      # if you want Active Directory integration, you need to configure the following parameters
+#      AD_INTEGRATION: ${AD_INTEGRATION:-False}
+#      AUTH_LDAP_SERVER_URI: ${AUTH_LDAP_SERVER_URI:-ldap://localhost:389}
+#      AUTH_LDAP_BIND_DN: ${AUTH_LDAP_BIND_DN:-cn=serviceaccount,cn=Users,dc=example,dc=com}
+#      AUTH_LDAP_BIND_PASSWORD: ${AUTH_LDAP_BIND_PASSWORD:-serviceaccount-password}
+#      AUTH_LDAP_USER_SEARCH_STRING: ${AUTH_LDAP_USER_SEARCH_STRING:-OU=Users,DC=example,DC=com}
+#      AUTH_LDAP_GROUP_SEARCH_STRING: ${AUTH_LDAP_GROUP_SEARCH_STRING:-OU=Groups,DC=example,DC=com}
     networks:
         - chatgpt_network
   web-server:
