@@ -177,6 +177,7 @@ def conversation(request):
     presence_penalty = request.data.get('presence_penalty', 0)
     web_search_params = request.data.get('web_search')
     openai_api_key = request.data.get('openaiApiKey')
+    frugal_mode = request.data.get('frugalMode', False)
 
     if conversation_id:
         # get the conversation
@@ -193,10 +194,10 @@ def conversation(request):
     message_obj.save()
 
     try:
-        messages = build_messages(model, conversation_obj, web_search_params)
+        messages = build_messages(model, conversation_obj, web_search_params, frugal_mode)
 
         if settings.DEBUG:
-            print(messages)
+            print('prompt:', messages)
     except Exception as e:
         print(e)
         return Response(
@@ -229,6 +230,7 @@ def conversation(request):
             yield sse_pack('error', {
                 'error': str(e)
             })
+            print('openai error', e)
             return
         collected_events = []
         completion_text = ''
@@ -260,10 +262,13 @@ def conversation(request):
     return StreamingHttpResponse(stream_content(), content_type='text/event-stream')
 
 
-def build_messages(model, conversation_obj, web_search_params):
+def build_messages(model, conversation_obj, web_search_params, frugal_mode = False):
 
     ordered_messages = Message.objects.filter(conversation=conversation_obj).order_by('created_at')
     ordered_messages_list = list(ordered_messages)
+
+    if frugal_mode:
+        ordered_messages_list = ordered_messages_list[-1:]
 
     system_messages = [{"role": "system", "content": "You are a helpful assistant."}]
 
