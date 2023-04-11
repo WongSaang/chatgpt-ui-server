@@ -1,6 +1,7 @@
 import os
 import json
 import openai
+import time
 import datetime
 import tiktoken
 from .models import Conversation, Message, Setting, Prompt
@@ -256,7 +257,14 @@ def conversation(request):
             'conversationId': conversation_obj.id
         })
 
-    return StreamingHttpResponse(stream_content(), content_type='text/event-stream')
+    response = StreamingHttpResponse(
+        stream_content(),
+        content_type='text/event-stream'
+    )
+    response['X-Accel-Buffering'] = 'no'
+    response['Cache-Control'] = 'no-cache'
+    return response
+
 
 
 def build_messages(model, conversation_obj, web_search_params, frugal_mode = False):
