@@ -240,9 +240,6 @@ def conversation(request):
             # print(event)
             if event['choices'][0]['finish_reason'] is not None:
                 break
-            # if debug
-            if settings.DEBUG:
-                print(event)
             if 'content' in event['choices'][0]['delta']:
                 event_text = event['choices'][0]['delta']['content']
                 completion_text += event_text  # append the text
