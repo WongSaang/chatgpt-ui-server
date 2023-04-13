@@ -165,13 +165,9 @@ def conversation(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     model_name = request.data.get('name')
-    if model_name is None:
-        model = get_current_model()
-    else:
-        model = get_current_model(model_name)
     message = request.data.get('message')
     conversation_id = request.data.get('conversationId')
-    max_tokens = request.data.get('max_tokens', model['max_response_tokens'])
+    request_max_response_tokens = request.data.get('max_tokens')
     temperature = request.data.get('temperature', 0.7)
     top_p = request.data.get('top_p', 1)
     frequency_penalty = request.data.get('frequency_penalty', 0)
@@ -179,6 +175,8 @@ def conversation(request):
     web_search_params = request.data.get('web_search')
     openai_api_key = request.data.get('openaiApiKey')
     frugal_mode = request.data.get('frugalMode', False)
+
+    model = get_current_model(model_name, request_max_response_tokens)
 
     if conversation_id:
         # get the conversation
@@ -220,7 +218,7 @@ def conversation(request):
             openai_response = myOpenai.ChatCompletion.create(
                 model=model['name'],
                 messages=messages,
-                max_tokens=max_tokens,
+                max_tokens=model['max_response_tokens'],
                 temperature=temperature,
                 top_p=top_p,
                 frequency_penalty=frequency_penalty,
@@ -304,8 +302,14 @@ def build_messages(model, conversation_obj, web_search_params, frugal_mode = Fal
     return system_messages + messages
 
 
-def get_current_model(model="gpt-3.5-turbo"):
-    return MODELS[model]
+def get_current_model(model_name, request_max_response_tokens):
+    if model_name is None:
+        model_name ="gpt-3.5-turbo"
+    model = MODELS[model_name]
+    if request_max_response_tokens is not None:
+        model['max_response_tokens'] = int(request_max_response_tokens)
+        model['max_prompt_tokens'] = model['max_tokens'] - model['max_response_tokens']
+    return model
 
 
 def get_openai_api_key():
