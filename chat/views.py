@@ -7,6 +7,7 @@ import tiktoken
 from .models import Conversation, Message, Setting, Prompt
 from django.conf import settings
 from django.http import StreamingHttpResponse
+from django.forms.models import model_to_dict
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -178,25 +179,11 @@ def conversation(request):
 
     model = get_current_model(model_name, request_max_response_tokens)
 
-    if conversation_id:
-        # get the conversation
-        conversation_obj = Conversation.objects.get(id=conversation_id)
-    else:
-        # create a new conversation
-        conversation_obj = Conversation(user=request.user)
-        conversation_obj.save()
-    # insert a new message
-    message_obj = Message(
-        conversation_id=conversation_obj.id,
-        message=message
-    )
-    message_obj.save()
-
     try:
-        messages = build_messages(model, conversation_obj, web_search_params, frugal_mode)
+        messages = build_messages(model, conversation_id, message, web_search_params, frugal_mode)
 
         if settings.DEBUG:
-            print('prompt:', messages)
+            print('messages:', messages)
     except Exception as e:
         print(e)
         return Response(
@@ -205,19 +192,13 @@ def conversation(request):
             },
             status=status.HTTP_400_BAD_REQUEST
         )
-    # print(prompt)
 
     def stream_content():
-        yield sse_pack('userMessageId', {
-            'userMessageId': message_obj.id,
-        })
-
         myOpenai = get_openai(openai_api_key)
-
         try:
             openai_response = myOpenai.ChatCompletion.create(
                 model=model['name'],
-                messages=messages,
+                messages=messages['messages'],
                 max_tokens=model['max_response_tokens'],
                 temperature=temperature,
                 top_p=top_p,
@@ -231,6 +212,26 @@ def conversation(request):
             })
             print('openai error', e)
             return
+
+        if conversation_id:
+            # get the conversation
+            conversation_obj = Conversation.objects.get(id=conversation_id)
+        else:
+            # create a new conversation
+            conversation_obj = Conversation(user=request.user)
+            conversation_obj.save()
+
+        # insert a new message
+        message_obj = create_message(
+            conversation_id=conversation_obj.id,
+            message=message,
+            messages=messages['messages'],
+            tokens=messages['tokens']
+        )
+        yield sse_pack('userMessageId', {
+            'userMessageId': message_obj.id,
+        })
+
         collected_events = []
         completion_text = ''
         # iterate through the stream of events
@@ -244,12 +245,13 @@ def conversation(request):
                 completion_text += event_text  # append the text
                 yield sse_pack('message', {'content': event_text})
 
-        ai_message_obj = Message(
+        ai_message_token = num_tokens_from_text(completion_text, model['name'])
+        ai_message_obj = create_message(
             conversation_id=conversation_obj.id,
             message=completion_text,
-            is_bot=True
+            is_bot=True,
+            tokens=ai_message_token
         )
-        ai_message_obj.save()
         yield sse_pack('done', {
             'messageId': ai_message_obj.id,
             'conversationId': conversation_obj.id
@@ -264,11 +266,26 @@ def conversation(request):
     return response
 
 
+def create_message(conversation_id, message, is_bot = False, messages = '', tokens = 0):
+    message_obj = Message(
+        conversation_id=conversation_id,
+        message=message,
+        is_bot=is_bot,
+        messages=messages,
+        tokens=tokens
+    )
+    message_obj.save()
+    return message_obj
 
-def build_messages(model, conversation_obj, web_search_params, frugal_mode = False):
 
-    ordered_messages = Message.objects.filter(conversation=conversation_obj).order_by('created_at')
-    ordered_messages_list = list(ordered_messages)
+def build_messages(model, conversation_id, new_message_content, web_search_params, frugal_mode = False):
+    if conversation_id:
+        ordered_messages = Message.objects.filter(conversation_id=conversation_id).order_by('created_at')
+        ordered_messages_list = list(ordered_messages)
+    else:
+        ordered_messages_list = []
+
+    ordered_messages_list.append({'is_bot': False, 'message': new_message_content})
 
     if frugal_mode:
         ordered_messages_list = ordered_messages_list[-1:]
@@ -281,16 +298,23 @@ def build_messages(model, conversation_obj, web_search_params, frugal_mode = Fal
 
     messages = []
 
+    result = {
+        'messages': messages,
+        'tokens': 0
+    }
+
     while current_token_count < max_token_count and len(ordered_messages_list) > 0:
         message = ordered_messages_list.pop()
-        role = "assistant" if message.is_bot else "user"
+        if isinstance(message, Message):
+            message = model_to_dict(message)
+        role = "assistant" if message['is_bot'] else "user"
         if web_search_params is not None and len(messages) == 0:
-            search_results = web_search(SearchRequest(message.message, ua=web_search_params['ua']), num_results=5)
-            message_content = compile_prompt(search_results, message.message, default_prompt=web_search_params['default_prompt'])
+            search_results = web_search(SearchRequest(message['message'], ua=web_search_params['ua']), num_results=5)
+            message_content = compile_prompt(search_results, message['message'], default_prompt=web_search_params['default_prompt'])
         else:
-            message_content = message.message
+            message_content = message['message']
         new_message = {"role": role, "content": message_content}
-        new_token_count = num_tokens_from_messages(system_messages + messages + [new_message])
+        new_token_count = num_tokens_from_messages(system_messages + messages + [new_message], model['name'])
         if new_token_count > max_token_count:
             if len(messages) > 0:
                 break
@@ -299,7 +323,10 @@ def build_messages(model, conversation_obj, web_search_params, frugal_mode = Fal
         messages.insert(0, new_message)
         current_token_count = new_token_count
 
-    return system_messages + messages
+    result['messages'] = system_messages + messages
+    result['tokens'] = current_token_count
+
+    return result
 
 
 def get_current_model(model_name, request_max_response_tokens):
@@ -318,6 +345,25 @@ def get_openai_api_key():
         return row.value
     return None
 
+
+def num_tokens_from_text(text, model="gpt-3.5-turbo-0301"):
+    try:
+        encoding = tiktoken.encoding_for_model(model)
+    except KeyError:
+        print("Warning: model not found. Using cl100k_base encoding.")
+        encoding = tiktoken.get_encoding("cl100k_base")
+
+    if model == "gpt-3.5-turbo":
+        print("Warning: gpt-3.5-turbo may change over time. Returning num tokens assuming gpt-3.5-turbo-0301.")
+        return num_tokens_from_text(text, model="gpt-3.5-turbo-0301")
+    elif model == "gpt-4":
+        print("Warning: gpt-4 may change over time. Returning num tokens assuming gpt-4-0314.")
+        return num_tokens_from_text(text, model="gpt-4-0314")
+
+    if model not in ["gpt-3.5-turbo-0301", "gpt-4-0314"]:
+        raise NotImplementedError(f"""num_tokens_from_text() is not implemented for model {model}.""")
+
+    return len(encoding.encode(text))
 
 def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
     """Returns the number of tokens used by a list of messages."""

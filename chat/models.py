@@ -11,6 +11,8 @@ class Conversation(models.Model):
 class Message(models.Model):
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE)
     message = models.TextField()
+    messages = models.TextField(default='')
+    tokens = models.IntegerField(default=0)
     is_bot = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
