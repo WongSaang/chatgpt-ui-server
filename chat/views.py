@@ -4,6 +4,8 @@ import openai
 import time
 import datetime
 import tiktoken
+
+from stats.models import TokenUsage
 from .models import Conversation, Message, Setting, Prompt
 from django.conf import settings
 from django.http import StreamingHttpResponse
@@ -223,6 +225,7 @@ def conversation(request):
 
         # insert a new message
         message_obj = create_message(
+            user=request.user,
             conversation_id=conversation_obj.id,
             message=message,
             messages=messages['messages'],
@@ -247,6 +250,7 @@ def conversation(request):
 
         ai_message_token = num_tokens_from_text(completion_text, model['name'])
         ai_message_obj = create_message(
+            user=request.user,
             conversation_id=conversation_obj.id,
             message=completion_text,
             is_bot=True,
@@ -266,7 +270,7 @@ def conversation(request):
     return response
 
 
-def create_message(conversation_id, message, is_bot = False, messages = '', tokens = 0):
+def create_message(user, conversation_id, message, is_bot = False, messages = '', tokens = 0):
     message_obj = Message(
         conversation_id=conversation_id,
         message=message,
@@ -275,7 +279,16 @@ def create_message(conversation_id, message, is_bot = False, messages = '', toke
         tokens=tokens
     )
     message_obj.save()
+
+    increase_token_usage(user, tokens)
+
     return message_obj
+
+
+def increase_token_usage(user, tokens):
+    token_usage, created = TokenUsage.objects.get_or_create(user=user)
+    token_usage.tokens += tokens
+    token_usage.save()
 
 
 def build_messages(model, conversation_id, new_message_content, web_search_params, frugal_mode = False):

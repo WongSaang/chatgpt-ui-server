@@ -53,13 +53,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'rest_framework',
-    'rest_framework.authtoken',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'dj_rest_auth',
     'dj_rest_auth.registration',
-    'chat.apps.ChatConfig'
+    'chat.apps.ChatConfig',
+    'stats.apps.StatsConfig',
 ]
 
 MIDDLEWARE = [
@@ -161,6 +161,7 @@ SITE_ID = 1
 
 REST_AUTH = {
     'USE_JWT': True,
+    'TOKEN_MODEL': None,
     'SESSION_LOGIN': False,
     'JWT_AUTH_COOKIE': 'auth',
     'JWT_AUTH_HTTPONLY': True,
