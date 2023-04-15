@@ -5,6 +5,7 @@ import time
 import datetime
 import tiktoken
 
+from provider.models import ApiKey
 from stats.models import TokenUsage
 from .models import Conversation, Message, Setting, Prompt
 from django.conf import settings
@@ -23,6 +24,7 @@ from utils.duckduckgo_search import web_search, SearchRequest
 class SettingViewSet(viewsets.ModelViewSet):
     serializer_class = SettingSerializer
     permission_classes = [IsAuthenticated]
+
     def get_queryset(self):
         available_names = [
             'open_registration',
@@ -123,6 +125,23 @@ def gen_title(request):
     prompt = request.data.get('prompt')
     conversation_obj = Conversation.objects.get(id=conversation_id)
     message = Message.objects.filter(conversation_id=conversation_id).order_by('created_at').first()
+    openai_api_key = request.data.get('openaiApiKey')
+    api_key = None
+
+    if openai_api_key is None:
+        openai_api_key = get_api_key_from_setting()
+
+    if openai_api_key is None:
+        api_key = get_api_key()
+        if api_key:
+            openai_api_key = api_key.key
+        else:
+            return Response(
+                {
+                    'error': 'There is no available API key'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     if prompt is None:
         prompt = 'Generate a short title for the following content, no more than 10 words. \n\nContent: '
@@ -131,9 +150,9 @@ def gen_title(request):
         {"role": "user", "content": prompt + message.message},
     ]
 
-    myOpenai = get_openai()
+    my_openai = get_openai(openai_api_key)
     try:
-        openai_response = myOpenai.ChatCompletion.create(
+        openai_response = my_openai.ChatCompletion.create(
             model='gpt-3.5-turbo-0301',
             messages=messages,
             max_tokens=256,
@@ -144,12 +163,16 @@ def gen_title(request):
         )
         completion_text = openai_response['choices'][0]['message']['content']
         title = completion_text.strip().replace('"', '')
+
+        # increment the token count
+        increase_token_usage(request.user, openai_response['usage']['total_tokens'], api_key)
     except Exception as e:
         print(e)
         title = 'Untitled Conversation'
     # update the conversation title
     conversation_obj.topic = title
     conversation_obj.save()
+
     return Response({
         'title': title
     })
@@ -159,14 +182,6 @@ def gen_title(request):
 # @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def conversation(request):
-    api_key = get_openai_api_key()
-    if api_key is None:
-        return Response(
-            {
-                'error': 'The administrator has not set the API key'
-            },
-            status=status.HTTP_400_BAD_REQUEST
-        )
     model_name = request.data.get('name')
     message = request.data.get('message')
     conversation_id = request.data.get('conversationId')
@@ -178,6 +193,23 @@ def conversation(request):
     web_search_params = request.data.get('web_search')
     openai_api_key = request.data.get('openaiApiKey')
     frugal_mode = request.data.get('frugalMode', False)
+
+    api_key = None
+
+    if openai_api_key is None:
+        openai_api_key = get_api_key_from_setting()
+
+    if openai_api_key is None:
+        api_key = get_api_key()
+        if api_key:
+            openai_api_key = api_key.key
+        else:
+            return Response(
+                {
+                    'error': 'There is no available API key'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     model = get_current_model(model_name, request_max_response_tokens)
 
@@ -196,9 +228,9 @@ def conversation(request):
         )
 
     def stream_content():
-        myOpenai = get_openai(openai_api_key)
+        my_openai = get_openai(openai_api_key)
         try:
-            openai_response = myOpenai.ChatCompletion.create(
+            openai_response = my_openai.ChatCompletion.create(
                 model=model['name'],
                 messages=messages['messages'],
                 max_tokens=model['max_response_tokens'],
@@ -229,7 +261,8 @@ def conversation(request):
             conversation_id=conversation_obj.id,
             message=message,
             messages=messages['messages'],
-            tokens=messages['tokens']
+            tokens=messages['tokens'],
+            api_key=api_key
         )
         yield sse_pack('userMessageId', {
             'userMessageId': message_obj.id,
@@ -254,7 +287,8 @@ def conversation(request):
             conversation_id=conversation_obj.id,
             message=completion_text,
             is_bot=True,
-            tokens=ai_message_token
+            tokens=ai_message_token,
+            api_key=api_key
         )
         yield sse_pack('done', {
             'messageId': ai_message_obj.id,
@@ -270,7 +304,7 @@ def conversation(request):
     return response
 
 
-def create_message(user, conversation_id, message, is_bot = False, messages = '', tokens = 0):
+def create_message(user, conversation_id, message, is_bot=False, messages='', tokens=0, api_key=None):
     message_obj = Message(
         conversation_id=conversation_id,
         message=message,
@@ -280,15 +314,19 @@ def create_message(user, conversation_id, message, is_bot = False, messages = ''
     )
     message_obj.save()
 
-    increase_token_usage(user, tokens)
+    increase_token_usage(user, tokens, api_key)
 
     return message_obj
 
 
-def increase_token_usage(user, tokens):
+def increase_token_usage(user, tokens, api_key=None):
     token_usage, created = TokenUsage.objects.get_or_create(user=user)
     token_usage.tokens += tokens
     token_usage.save()
+
+    if api_key:
+        api_key.token_used += tokens
+        api_key.save()
 
 
 def build_messages(model, conversation_id, new_message_content, web_search_params, frugal_mode = False):
@@ -352,11 +390,15 @@ def get_current_model(model_name, request_max_response_tokens):
     return model
 
 
-def get_openai_api_key():
+def get_api_key_from_setting():
     row = Setting.objects.filter(name='openai_api_key').first()
-    if row:
+    if row and row.value != '':
         return row.value
     return None
+
+
+def get_api_key():
+    return ApiKey.objects.filter(is_enabled=True).order_by('token_used').first()
 
 
 def num_tokens_from_text(text, model="gpt-3.5-turbo-0301"):
@@ -377,6 +419,7 @@ def num_tokens_from_text(text, model="gpt-3.5-turbo-0301"):
         raise NotImplementedError(f"""num_tokens_from_text() is not implemented for model {model}.""")
 
     return len(encoding.encode(text))
+
 
 def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
     """Returns the number of tokens used by a list of messages."""
@@ -410,9 +453,7 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
     return num_tokens
 
 
-def get_openai(openai_api_key = None):
-    if openai_api_key is None:
-        openai_api_key = get_openai_api_key()
+def get_openai(openai_api_key):
     openai.api_key = openai_api_key
     proxy = os.getenv('OPENAI_API_PROXY')
     if proxy:
