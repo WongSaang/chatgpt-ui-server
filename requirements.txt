@@ -12,3 +12,4 @@ django-allauth~=0.52.0
 dj-rest-auth~=3.0.0
 requests~=2.27.1
 beautifulsoup4~=4.12.0
+django-simpleui
