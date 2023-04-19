@@ -23,7 +23,7 @@ from utils.duckduckgo_search import web_search, SearchRequest
 
 class SettingViewSet(viewsets.ModelViewSet):
     serializer_class = SettingSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         available_names = [
