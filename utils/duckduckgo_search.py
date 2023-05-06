@@ -3,6 +3,18 @@ from typing import List
 from bs4 import BeautifulSoup
 from .search_abc import SearchRequest, SearchResponse, SearchResult
 
+import os
+proxies = None
+for key in ['DUCK_PROXY', 'http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
+    value = os.getenv(key)
+    if value:
+        proxies = {
+            'http': value,
+            'https': value,
+        }
+        break
+
+
 BASE_URL = 'https://lite.duckduckgo.com'
 
 
@@ -19,7 +31,7 @@ def get_html(search: SearchRequest) -> SearchResponse:
         'df': search.timerange,
         'kl': search.region,
     }
-    response = requests.post(f'{BASE_URL}/lite/', headers=headers, data=data)
+    response = requests.post(f'{BASE_URL}/lite/', headers=headers, data=data, proxies=proxies)
     if not response.ok:
         raise Exception(f'Failed to fetch: {response.status_code} {response.reason}')
     return SearchResponse(response.status_code, response.text, response.url)
