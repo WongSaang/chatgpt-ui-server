@@ -284,6 +284,70 @@ def gen_title(request):
 @api_view(['POST'])
 # @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
+def upload_conversations(request):
+    """allow user to import a list of conversations"""
+    user=request.user
+    import_err_msg = 'bad_import'
+    conversation_ids = []
+    try:
+        imports = request.data.get('imports')
+        # verify
+        conversations = []
+        for conversation in imports:
+            topic = conversation.get('conversation_topic', None)
+            messages = []
+            for message in conversation.get('messages'):
+                msg = {}
+                msg['role'] = message['role']
+                msg['content'] = message['content']
+                messages.append(msg)
+            if len(messages) > 0:
+                conversations.append({
+                    'topic': topic,
+                    'messages': messages,
+                })
+        # dump
+        for conversation in conversations:
+            topic = conversation['topic']
+            messages = conversation['messages']
+            cobj = Conversation(
+                topic=topic if topic else '',
+                user=user,
+            )
+            cobj.save()
+            conversation_ids.append(cobj.id)
+            for idx, msg in enumerate(messages):
+                try:
+                    Message._meta.get_field('user')
+                    mobj = Message(
+                        user=user,
+                        conversation=cobj,
+                        message=msg['content'],
+                        is_bot=msg['role'] != 'user',
+                        messages=messages[:idx + 1],
+                    )
+                except:
+                    mobj = Message(
+                        conversation=cobj,
+                        message=msg['content'],
+                        is_bot=msg['role'] != 'user',
+                        messages=messages[:idx + 1],
+                    )
+                mobj.save()
+    except Exception as e:
+        logger.debug(e)
+        return Response(
+            {'error': import_err_msg},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # return a list of new conversation id
+    return Response(conversation_ids)
+
+
+@api_view(['POST'])
+# @authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def conversation(request):
     model_name = request.data.get('name')
     message_object_list = request.data.get('message')
