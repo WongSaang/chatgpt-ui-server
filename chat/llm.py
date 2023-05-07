@@ -205,12 +205,12 @@ def get_embedding_document(file, mime):
     return pickle_faiss(db)
 
 
-condense_question_template = """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question, use the same language.
+condense_question_template = """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
 
 Chat History:
 {chat_history}
 Follow Up Input: {question}
-Standalone question:"""
+Standalone question (in the same language of Follow Up Input):"""
 MY_CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(condense_question_template)
 
 
@@ -228,10 +228,10 @@ def langchain_doc_chat(messages):
 
     memory = ConversationBufferWindowMemory(memory_key='chat_history', return_messages=True, k=32)
     for msg in messages['messages']:
-        if msg.get('is_bot', False):  # user or system message
-            memory.chat_memory.add_user_message(msg['content'])
-        else:
+        if msg.get('role', '') == 'assistant':
             memory.chat_memory.add_ai_message(msg['content'])
+        else:  # user or system message
+            memory.chat_memory.add_user_message(msg['content'])
 
     question_generator = LLMChain(
         llm=chat_model.model,
