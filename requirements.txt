@@ -70,3 +70,4 @@ typing_extensions==4.5.0
 urllib3==1.26.15
 wrapt==1.15.0
 yarl==1.9.2
+docx2txt==0.8
