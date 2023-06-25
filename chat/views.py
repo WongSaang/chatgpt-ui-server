@@ -206,8 +206,20 @@ MODELS = {
     'gpt-4': {
         'name': 'gpt-4',
         'max_tokens': 8192,
-        'max_prompt_tokens': 6196,
+        'max_prompt_tokens': 6192,
         'max_response_tokens': 2000
+    },
+    'gpt-3.5-turbo-16k': {
+        'name': 'gpt-3.5-turbo-16k',
+        'max_tokens': 16384,
+        'max_prompt_tokens': 12384,
+        'max_response_tokens': 4000
+    },
+    'gpt-4-32k': {
+        'name': 'gpt-4-32k',
+        'max_tokens': 32768,
+        'max_prompt_tokens': 24768,
+        'max_response_tokens': 8000
     }
 }
 
