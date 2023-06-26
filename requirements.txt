@@ -38,7 +38,7 @@ mysqlclient==2.1.1
 numexpr==2.8.4
 numpy==1.24.3
 oauthlib==3.2.2
-openai==0.27.6
+openai==0.27.8
 openapi-schema-pydantic==1.2.4
 packaging==23.1
 platformdirs==3.5.0
@@ -61,7 +61,7 @@ soupsieve==2.4.1
 SQLAlchemy==2.0.12
 sqlparse==0.4.4
 tenacity==8.2.2
-tiktoken==0.3.3
+tiktoken==0.4.0
 tomli==2.0.1
 tomlkit==0.11.8
 tqdm==4.65.0
