@@ -28,9 +28,10 @@ from utils.search_prompt import compile_prompt
 from utils.duckduckgo_search import web_search, SearchRequest
 from .tools import TOOL_LIST
 from .llm import get_embedding_document, unpick_faiss, langchain_doc_chat
+from langchain.chains import OpenAIModerationChain
 from .llm import setup_openai_env as llm_openai_env
 from .llm import setup_openai_model as llm_openai_model
-
+from .dfa import DFA
 
 logger = logging.getLogger(__name__)
 
@@ -377,16 +378,12 @@ def conversation(request):
     frugal_mode = request.data.get('frugalMode', False)
 
     message_object = message_object_list[-1]
-    message_type = message_object.get('message_type', 0)
-    tool_name = message_object.get('tool', None)
-    tool_args = message_object.get('tool_args', None)
-    if tool_name:
-        tool = {'name': tool_name, 'args': tool_args}
-    else:
-        tool = None
+    message_content = message_object.get('content', 0)
 
-    logger.debug('conversation_id = %s message_objects = %s', conversation_id, message_object_list)
-
+    dfa = DFA()
+    if dfa.exists(message_content):
+        return Response({'error': '违反使用规则.'}, status=status.HTTP_400_BAD_REQUEST)
+    
     api_key = None
 
     if openai_api_key is None:
@@ -403,6 +400,22 @@ def conversation(request):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    moderation_chain_error = OpenAIModerationChain(error=True,openai_api_key=openai_api_key)
+    try:
+        moderation_chain_error.run(message_content)
+    except:
+        return Response({'error': '违反使用规则.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    message_type = message_object.get('message_type', 0)
+    tool_name = message_object.get('tool', None)
+    tool_args = message_object.get('tool_args', None)
+    if tool_name:
+        tool = {'name': tool_name, 'args': tool_args}
+    else:
+        tool = None
+
+    logger.debug('conversation_id = %s message_objects = %s', conversation_id, message_object_list)
 
     my_openai = get_openai(openai_api_key)
     llm_openai_env(my_openai.api_base, my_openai.api_key)
