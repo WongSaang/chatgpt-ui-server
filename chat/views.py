@@ -801,7 +801,7 @@ def num_tokens_from_text(text, model="gpt-3.5-turbo-0301"):
         print("Warning: model not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
 
-    if model in MODELS.keys():
+    if model in ["gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4", "gpt-4-32k"]:
         print(
             f"Warning: {model} may change over time.",
             f"Returning num tokens assuming {model}-0613."
@@ -812,7 +812,8 @@ def num_tokens_from_text(text, model="gpt-3.5-turbo-0301"):
         "gpt-3.5-turbo-0613",
         "gpt-4-0613",
         "gpt-3.5-turbo-16k-0613",
-        "gpt-4-32k-0613"
+        "gpt-4-32k-0613",
+        "gpt-4-1106-preview",
     ]:
         raise NotImplementedError(
             f"num_tokens_from_text() is not implemented for model {model}.")
@@ -828,7 +829,7 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
         print("Warning: model not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
 
-    if model in MODELS.keys():
+    if model in ["gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4", "gpt-4-32k"]:
         print(
             f"Warning: {model} may change over time.",
             f"Returning num tokens assuming {model}-0613."
@@ -839,7 +840,7 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
         "gpt-3.5-turbo-0613",
         "gpt-3.5-turbo-16k-0613",
         "gpt-4-32k-0613",
-        "gpt-4-1106-preview-0613"
+        "gpt-4-1106-preview"
     ]:
         tokens_per_message = 4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
         tokens_per_name = -1    # if there's a name, the role is omitted
