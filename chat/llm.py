@@ -136,7 +136,7 @@ class EmbeddingModel:
         if not self._function:
             setup_openai_env()
             self.name = 'openai'
-            self._function = OpenAIEmbeddings()
+            self._function = OpenAIEmbeddings(openai_api_key=os.getenv('OPENAI_API_KEY'))
         return self._function
 
 

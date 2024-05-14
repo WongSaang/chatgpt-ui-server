@@ -158,14 +158,18 @@ class EmbeddingDocumentViewSet(viewsets.ModelViewSet):
         logger.debug('user %s upload a file %s %s', self.request.user, file_mime, self.request.data['title'])
 
         with tempfile.TemporaryDirectory() as tmpdirname:
-            if 'text/' in file_mime:
-                mode = 'w'
-            else:
-                mode = 'wb'
             dump_basename = 'fh' + str(uuid.uuid4()).replace('-', '')
             dump_name = os.path.join(tmpdirname, dump_basename)
+            if 'text/' in file_mime:
+                file_content = file_bytes.decode('utf-8')
+                mode = 'w'
+            else:
+                file_content = file_bytes
+                mode = 'wb'
+            # dump_basename = 'fh' + str(uuid.uuid4()).replace('-', '')
+            # dump_name = os.path.join(tmpdirname, dump_basename)
             with open(dump_name, mode) as f:
-                f.write(file_bytes)
+                f.write(file_content)
 
             faiss_store = get_embedding_document(dump_name, file_mime)
 
